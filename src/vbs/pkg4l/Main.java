@@ -1,14 +1,12 @@
-package vbs.pkg4l;
+package src.vbs.pkg4l;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.Image;
+
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import java.awt.Color;
@@ -19,6 +17,8 @@ import java.awt.Color;
  */
 public class Main {
     static JTextArea textArea = new JTextArea(15, 31);
+    static JTextField wsh = new JTextField(10);
+    static JTextField fileName = new JTextField(15);
     public static void main(String[] args) throws IOException {
         
         try {
@@ -33,16 +33,27 @@ public class Main {
             System.getLogger(Main.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
         
-        JFrame frame = new JFrame("VBS-4L");
+        JFrame frame = new JFrame("VBScript For Linux");
         frame.setSize(350, 350);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         
+        Image icon = ImageIO.read(Main.class.getResource("/durian.png"));
+        
+        frame.setIconImage(icon);
+        
         JPanel panel = new JPanel();
         JButton save = new JButton("Save");
         JButton run = new JButton("Run");
         JButton exit = new JButton("Exit");
+        wsh.setFont(new java.awt.Font("Noto Mono", 0, 12));
+        wsh.setText("wscript.exe");
+        
+        save.setToolTipText("<html>Save file:<br>program.vbs</html>");
+        run.setToolTipText("Execute file");
+        exit.setToolTipText("Leave VBS-4L");
+        wsh.setToolTipText("<html>Enviornment for executing VBScript files<br> <br>wscript.exe for GUI based scripts<br>cscript.exe for command-line based scripts<br>Or use a custom enviornment</html>");
         
         JScrollPane sp = new JScrollPane(textArea);
         sp.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -50,10 +61,13 @@ public class Main {
         textArea.setBackground(Color.BLACK);
         textArea.setForeground(Color.GREEN);
         textArea.setFont(new java.awt.Font("Noto Mono", 0, 12));
+        textArea.setText("'made in VBScript 4 Linux \n"+"'@author "+System.getProperty("user.name")+"\n"+"\n"+"X=Msgbox(\"Hello, World!\", 0+0, \"Linux\")");
+    
         
         panel.add(save);
         panel.add(run);
         panel.add(exit);
+        panel.add(wsh);
         panel.add(sp);
         frame.add(panel);
         frame.setVisible(true);
@@ -74,7 +88,7 @@ public class Main {
         run.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e){
                 try {
-                    ProcessBuilder processBuilder = new ProcessBuilder("wine", "wscript.exe", "program.vbs");
+                    ProcessBuilder processBuilder = new ProcessBuilder("wine", wsh.getText(), "program.vbs");
                     processBuilder.redirectErrorStream(true);
                     Process process = processBuilder.start();
                     
