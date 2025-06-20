@@ -6,6 +6,7 @@ import java.io.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.Image;
+import java.util.List;
 
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -18,7 +19,6 @@ import java.awt.Color;
 public class Main {
     static JTextArea textArea = new JTextArea(15, 31);
     static JTextField wsh = new JTextField(10);
-    static JTextField fileName = new JTextField(15);
     public static void main(String[] args) throws IOException {
         
         try {
@@ -38,9 +38,7 @@ public class Main {
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
-        
         Image icon = ImageIO.read(Main.class.getResource("/durian.png"));
-        
         frame.setIconImage(icon);
         
         JPanel panel = new JPanel();
@@ -52,7 +50,7 @@ public class Main {
         
         save.setToolTipText("<html>Save file:<br>program.vbs</html>");
         run.setToolTipText("Execute file");
-        exit.setToolTipText("Leave VBS-4L");
+        exit.setToolTipText("Leave VBS4L");
         wsh.setToolTipText("<html>Enviornment for executing VBScript files<br> <br>wscript.exe for GUI based scripts<br>cscript.exe for command-line based scripts<br>Or use a custom enviornment</html>");
         
         JScrollPane sp = new JScrollPane(textArea);
@@ -62,7 +60,6 @@ public class Main {
         textArea.setForeground(Color.GREEN);
         textArea.setFont(new java.awt.Font("Noto Mono", 0, 12));
         textArea.setText("'made in VBScript 4 Linux \n"+"'@author "+System.getProperty("user.name")+"\n"+"\n"+"X=Msgbox(\"Hello, World!\", 0+0, \"Linux\")");
-    
         
         panel.add(save);
         panel.add(run);
@@ -72,14 +69,19 @@ public class Main {
         frame.add(panel);
         frame.setVisible(true);
         
+        cmdOutput cOut = new cmdOutput();
+        cOut.setVisible(true);
+        
         save.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e){
+                System.out.println("vbs4l- saving...");
                 try {
                     File file = new File("program.vbs");
                     file.createNewFile();
                     
                     BufferedWriter fileOut = new BufferedWriter(new FileWriter("program.vbs"));
                     textArea.write(fileOut);
+                    System.out.println("vbs4l- saved program.vbs");
                 } catch (IOException ex) {
                     System.getLogger(Main.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
                 }
@@ -87,23 +89,35 @@ public class Main {
         });
         run.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e){
-                try {
-                    ProcessBuilder processBuilder = new ProcessBuilder("wine", wsh.getText(), "program.vbs");
-                    processBuilder.redirectErrorStream(true);
-                    Process process = processBuilder.start();
-                    
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    String line;
-                    while((line = reader.readLine()) != null){
+                SwingWorker<Void, String> worker = new SwingWorker<>() {
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        System.out.println("vbs4l- starting...");
+                        String cmd = "wine "+wsh.getText()+" program.vbs";
+                        ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", cmd);
+                        processBuilder.redirectErrorStream(true);
+                        Process process = processBuilder.start();
                         
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                publish(line);  // This triggers process() on the EDT
+                            }
+                            process.waitFor();
+                        }
+                        return null;
                     }
-                    process.waitFor();
-                } catch (IOException ex) {
-                    System.getLogger(Main.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-                } catch (InterruptedException ex) {
-                    System.getLogger(Main.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-                }
-                
+
+                    @Override
+                    protected void process(List<String> chunks) {
+                        for (String line : chunks) {
+                            System.out.println(line);
+                        }
+                    }
+                };
+
+                worker.execute();
+
             }
         });
         exit.addActionListener(new ActionListener(){
