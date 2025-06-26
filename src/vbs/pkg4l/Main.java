@@ -69,16 +69,12 @@ public class Main {
         frame.add(panel);
         frame.setVisible(true);
         
-        cmdOutput cOut = new cmdOutput();
-        cOut.setVisible(true);
-        
         save.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e){
                 System.out.println("vbs4l- saving...");
                 try {
                     File file = new File("program.vbs");
                     file.createNewFile();
-                    
                     BufferedWriter fileOut = new BufferedWriter(new FileWriter("program.vbs"));
                     textArea.write(fileOut);
                     System.out.println("vbs4l- saved program.vbs");
@@ -94,18 +90,17 @@ public class Main {
                     protected Void doInBackground() throws Exception {
                         System.out.println("vbs4l- starting...");
                         String cmd = "wine "+wsh.getText()+" program.vbs";
-                        ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", cmd);
-                        processBuilder.redirectErrorStream(true);
+                        ProcessBuilder processBuilder = new ProcessBuilder("xterm", "-e", cmd);
                         Process process = processBuilder.start();
                         
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                publish(line);  // This triggers process() on the EDT
-                            }
-                            process.waitFor();
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            textArea.append(line+"\n");
                         }
-                        return null;
+                        
+                        return(null);
                     }
 
                     @Override
